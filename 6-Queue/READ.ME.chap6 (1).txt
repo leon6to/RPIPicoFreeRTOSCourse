@@ -1,0 +1,151 @@
+=====================================================
+README — Chapter 5
+Modifications Applied to Code: FreeRTOS Queue-Controlled CounterAgent
+=====================================================
+
+Version : 1.0
+Date    : [fill in]
+
+-----------------------------------------------------
+1. SUMMARY OF CODE MODIFICATIONS
+-----------------------------------------------------
+The codebase was modified to extend the original queue example so that 
+the CounterAgent can receive and process LED blink pattern commands 
+through a FreeRTOS message queue. These modifications change how 
+CounterAgent operates internally and how MainTask interacts with it.
+
+Main changes include:
+- Addition of a FreeRTOS Queue inside CounterAgent.
+- Replacement of direct LED control with asynchronous message-based 
+  blink commands.
+- Modification of the CounterAgent task loop to wait for queue 
+  messages.
+- Updating MainTask so it sends pattern values through CounterAgent's 
+  blink() method.
+
+-----------------------------------------------------
+2. DETAILED CODE CHANGES
+-----------------------------------------------------
+
+2.1. CounterAgent: Added a QueueHandle_t
+-----------------------------------------------------
+A new private member was added:
+
+    QueueHandle_t _queue;
+
+This queue is used for passing 4-bit LED patterns to CounterAgent.
+
+2.2. Queue created in start()
+-----------------------------------------------------
+Inside CounterAgent::start(), the following line was added:
+
+    _queue = xQueueCreate(4, sizeof(uint8_t));
+
+This creates a queue capable of storing up to 4 LED pattern commands, 
+each represented as one byte.
+
+2.3. blink() method replaced by queue send
+-----------------------------------------------------
+Originally, blink() controlled GPIOs directly.  
+It now sends the pattern to the queue:
+
+    xQueueSend(_queue, &value, 0);
+
+This makes CounterAgent asynchronous, letting the task respond only 
+inside its main loop instead of from the caller thread.
+
+2.4. CounterAgent task loop modified
+-----------------------------------------------------
+The run() loop was rewritten to wait for commands:
+
+    if (xQueueReceive(_queue, &value, portMAX_DELAY)) {
+        // decode bits and set GPIO
+    }
+
+This ensures that CounterAgent only reacts when new commands arrive.
+
+2.5. LED update logic moved entirely inside run()
+-----------------------------------------------------
+CounterAgent now performs GPIO updates inside run(), not inside blink().  
+This aligns with correct FreeRTOS design (one task owns the resource).
+
+2.6. Optional delay added for visual clarity
+-----------------------------------------------------
+A small delay:
+
+    vTaskDelay(200);
+
+was added so the LED pattern is visible.  
+It can be removed for high-speed tasks.
+
+-----------------------------------------------------
+3. MODIFICATIONS IN MAINTASK
+-----------------------------------------------------
+
+3.1. No direct LED handling
+-----------------------------------------------------
+MainTask no longer interacts with LED pins through CounterAgent.  
+Instead, it sends patterns:
+
+    counter.blink(r);
+
+3.2. Random value limited to 4 bits
+-----------------------------------------------------
+A 4-bit mask was applied:
+
+    uint8_t r = rand() & 0x0F;
+
+This ensures values match the 4-LED output.
+
+3.3. Logging added for readability
+-----------------------------------------------------
+MainTask prints the value being sent:
+
+    printf("Motif sent: 0x%X\n", r);
+
+This helps track queue activity.
+
+-----------------------------------------------------
+4. REASONS FOR THE MODIFICATIONS
+-----------------------------------------------------
+
+4.1. Better separation of responsibilities
+-----------------------------------------------------
+- MainTask generates patterns.
+- CounterAgent displays them.
+- No task touches another's hardware resources.
+
+4.2. Enables asynchronous message-driven design
+-----------------------------------------------------
+This allows:
+- non-blocking behavior
+- future extensions (complex commands, sequences, delays)
+- independent timing between tasks
+
+4.3. Demonstrates correct FreeRTOS usage
+-----------------------------------------------------
+Tasks should not share GPIO access.  
+Using a queue avoids race conditions and timing conflicts.
+
+-----------------------------------------------------
+5. ADVANTAGES OF THE UPDATED DESIGN
+-----------------------------------------------------
+- Reliable inter-task communication.
+- Scalable structure for multiple agents.
+- Cleaner and safer LED manipulation.
+- Easier to debug, extend, or replace individual agents.
+- Queue-based control is compatible with ISR event triggers.
+
+-----------------------------------------------------
+6. NEXT POSSIBLE IMPROVEMENTS
+-----------------------------------------------------
+Optional enhancements that can be added later:
+
+- Message struct with duration, repeat count, or blink type.
+- Add a SequenceAgent for multi-step LED patterns.
+- Add acknowledgment queue if MainTask needs completion feedback.
+- Implement time-based scheduling using FreeRTOS timers.
+
+=====================================================
+END OF README
+=====================================================
