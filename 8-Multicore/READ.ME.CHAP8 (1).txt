@@ -1,0 +1,157 @@
+FreeRTOS SMP Demonstration on Raspberry Pi Pico
+Overview
+
+This project demonstrates the use of FreeRTOS in SMP (Symmetric Multi-Processing) mode on the Raspberry Pi Pico (RP2040).
+The application takes advantage of the dual-core architecture to run multiple FreeRTOS tasks concurrently on both cores.
+
+Main features:
+
+Execution of FreeRTOS tasks on both cores
+
+LED blinking on different GPIO pins
+
+Binary counter displayed on multiple GPIO outputs
+
+Inter-task communication
+
+Runtime statistics and heap usage monitoring
+
+System Architecture
+Core Assignment
+Core	Responsibility
+Core 0	Main task and LED blinking on GPIO 0
+Core 1	LED blinking on GPIO 5 and binary counter on GPIO 1–4
+
+Task-to-core affinity is explicitly defined using vTaskCoreAffinitySet().
+
+Hardware Requirements
+
+Raspberry Pi Pico (RP2040)
+
+LEDs connected to the following GPIO pins:
+
+Function	GPIO
+Blink LED (Core 0)	GPIO 0
+Counter Bit 0	GPIO 1
+Counter Bit 1	GPIO 2
+Counter Bit 2	GPIO 3
+Counter Bit 3	GPIO 4
+Blink LED (Core 1)	GPIO 5
+Software Dependencies
+
+Raspberry Pi Pico SDK
+
+FreeRTOS with SMP support enabled
+
+Custom components:
+
+BlinkAgent
+
+CounterAgent
+
+Task Priority
+#define TASK_PRIORITY ( tskIDLE_PRIORITY + 1UL )
+
+
+All tasks run at the same priority, slightly higher than the idle task.
+
+Application Components
+Main Task (mainTask)
+
+The main FreeRTOS task is responsible for:
+
+Creating two BlinkAgent instances and one CounterAgent
+
+Starting their associated tasks
+
+Assigning each task to a specific core
+
+Periodically sending random values to the counter
+
+Printing runtime statistics every 3 seconds
+
+uint8_t r = rand() & 0xF;
+counter.on(r);
+vTaskDelay(3000);
+
+BlinkAgent
+
+Each BlinkAgent:
+
+Controls a single LED
+
+Runs in its own FreeRTOS task
+
+Is bound to a specific CPU core
+
+CounterAgent
+
+The CounterAgent:
+
+Displays a 4-bit binary value using GPIO 1 to 4
+
+Receives commands from the main task
+
+Runs exclusively on Core 1
+
+Runtime Statistics (runTimeStats)
+
+This function collects and displays:
+
+Total number of FreeRTOS tasks
+
+For each task:
+
+Task number
+
+Current priority
+
+Base priority
+
+Stack high water mark
+
+Task name
+
+Heap statistics:
+
+Available heap memory
+
+Number of free blocks
+
+Number of successful allocations
+
+Number of successful frees
+
+This information is useful for debugging and performance monitoring.
+
+System Startup
+vLaunch()
+
+Creates the main task
+
+Starts the FreeRTOS scheduler
+
+xTaskCreate(mainTask, "MainThread", 500, NULL, TASK_PRIORITY, &task);
+vTaskStartScheduler();
+
+main()
+
+Initializes USB serial communication
+
+Displays the RTOS type (FreeRTOS or FreeRTOS SMP)
+
+Launches the scheduler
+
+Educational Purpose
+
+This project demonstrates:
+
+How to use FreeRTOS SMP on a dual-core microcontroller
+
+Task creation and core affinity management
+
+Concurrent execution across CPU cores
+
+GPIO control from multiple tasks
+
+Runtime and memory diagnostics in FreeRTOS
