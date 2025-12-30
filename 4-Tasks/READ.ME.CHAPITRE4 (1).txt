@@ -1,0 +1,35 @@
+
+CHAPTER 4: MULTITASKING AND PRIORITIES (FreeRTOS)
+
+
+DAILY WORK
+Date: 11/04/2025
+- Added 9 BlinkAgent tasks for 9 LEDs
+- Tested creation of 160 BlinkWorkers using a dynamic loop
+- Observed system crash when heap memory was exhausted
+- Updated runTimeStats() to display the number of active tasks
+
+ Q&A
+Q1: How many tasks can be created on the RP2040?
+A1: Around 160 lightweight tasks before running out of memory.
+A2: With 160 tasks, FreeRTOS reports a memory allocation error.
+
+Q2: What does runTimeStats() do?
+A2: It displays the list of active tasks, their priority, and remaining stack memory.
+
+ TECHNICAL MODIFICATIONS
+- Added a loop to create 160 BlinkWorkers
+- Added a counting semaphore (3 tokens)
+- Increased main task stack size to 800 words
+
+  OBSERVATIONS
+- Tasks created: up to 160 before memory allocation failure
+- Free memory: ~80 KB
+- Priorities handled correctly (higher priorities use more CPU time)
+
+COMMENTS
+- FreeRTOS on RP2040 remains stable with about fifty active tasks
+- The semaphore effectively limits the number of active LEDs
+- Best practice: monitor both stack size and heap usage carefully
+
+
